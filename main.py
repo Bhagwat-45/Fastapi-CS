@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from httpx import request
 
@@ -10,7 +11,7 @@ templates = Jinja2Templates(
     directory="templates"
 )
 
-
+app.mount("/static",StaticFiles(directory="static"),name="static")
 
 
 posts: list[dict] = [
@@ -31,13 +32,23 @@ posts: list[dict] = [
 ]
 
 
-@app.get("/",include_in_schema=False)
-@app.get("/posts",include_in_schema=False)
+@app.get("/",include_in_schema=False,name="home")
+@app.get("/posts",include_in_schema=False,name="posts")
 def home(request: Request):
-    return templates.TemplateResponse(request,"home.html",{"posts" : posts})
+    return templates.TemplateResponse(request,"home.html",{"posts" : posts,"title" : "Home"})
 
 @app.get("/api/posts")
 def get_posts():
     return posts
 # Automatically converted to JSON Array
+
+@app.get("/api/posts/{post_id}")
+def get_post(post_id: int):
+    for i in posts:
+        if i.get("id") == post_id:
+            return i
+        
+    return {
+        "Error" : "Post not found"
+    }
 

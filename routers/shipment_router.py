@@ -1,16 +1,15 @@
-from curses.ascii import HT
 from fastapi import APIRouter,HTTPException,status
 from typing import Optional,Any
 from data import shipments
-from schema.shipment_schema import Shipment
+from schema.shipment_schema import ShipmentCreate, ShipmentRead, ShipmentStatus, ShipmentUpdate
 
 router = APIRouter(
     tags=["Shipments"],
     prefix="/api"
 )
 
-@router.get("/shipments",status_code=status.HTTP_200_OK)
-def get_latest_shipment(id: Optional[int])->dict[str,Any]:
+@router.get("/shipments",status_code=status.HTTP_200_OK,response_model=ShipmentRead)
+def get_latest_shipment(id: Optional[int]):
     if not id:
         latest = max(shipments.keys())
         return shipments[latest]
@@ -18,31 +17,24 @@ def get_latest_shipment(id: Optional[int])->dict[str,Any]:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return shipments[id]
 
-@router.get("/shipments/{id}",status_code=status.HTTP_200_OK)
-def get_shipment_by_id(id: int)->dict[str,Any]:
+@router.get("/shipments/{id}",status_code=status.HTTP_200_OK,response_model=ShipmentRead)
+def get_shipment_by_id(id: int):
     if id not in shipments:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return shipments[id]
 
-@router.get("/shipments/{field}",status_code=status.HTTP_200_OK)
-def get_shipment_by_field(field:str, id: int)-> dict[str,Any]:
-    if field not in ["content","weight","status"] or id not in shipments:
+@router.get("/shipments/{field}",status_code=status.HTTP_200_OK,response_model=ShipmentRead)
+def get_shipment_by_field(field:str, id: int):
+    if id not in shipments:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return {
         "field" : shipments[id][field]
     }
 
 
-@router.post("/shipments",status_code=status.HTTP_201_CREATED)
-def new_shipment(body: Shipment) -> dict[str,Any]:
+@router.post("/shipments",status_code=status.HTTP_201_CREATED,response_model=ShipmentRead)
+def new_shipment(body: ShipmentCreate):
     new_id = max(shipments.keys()) + 1
-
-
-    if body.weight > 25:
-        raise HTTPException(
-            status_code= status.HTTP_406_NOT_ACCEPTABLE,
-            detail= "Maximum weight is 25 Kgs"
-        )
 
     shipments[new_id] = {
         "content" : body.content,
@@ -54,10 +46,10 @@ def new_shipment(body: Shipment) -> dict[str,Any]:
         "new_shipment" : shipments[new_id]
     }
 
-@router.put("/shipments")
+@router.put("/shipments",response_model=ShipmentRead)
 def update_shipments(
-    id: int,body: Shipment
-)->dict[str,Any]:
+    id: int,body: ShipmentUpdate
+):
     if id not in shipments:
         raise HTTPException(status_code=404,detail="ID not found!")
     shipments[id] = {
@@ -68,8 +60,8 @@ def update_shipments(
 
     return shipments[id]
 
-@router.patch("/shipments")
-def patch_shipments(id:int, body: dict[str,Any])->dict[str,Any]:
+@router.patch("/shipments",response_model=ShipmentRead)
+def patch_shipments(id:int, body: dict[str,ShipmentStatus]):
     if id not in shipments:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     shipment = shipments[id]
@@ -81,8 +73,8 @@ def patch_shipments(id:int, body: dict[str,Any])->dict[str,Any]:
     return shipment
 
 
-@router.delete("/shipments",status_code=status.HTTP_200_OK)
-def delete_shipment(id: int)->dict[str,Any]:
+@router.delete("/shipments",status_code=status.HTTP_200_OK,response_model=ShipmentRead)
+def delete_shipment(id: int):
     if id not in shipments:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"The shipment id {id} not found!")   
     shipments.pop(id)
